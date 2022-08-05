@@ -1,0 +1,44 @@
+# put here your custom config value
+menu "Mesh Configuration"
+config ROUTER_SSID
+    string "WiFi SSID"
+    default "myssid"
+    help
+	SSID (network name) for Root node connect to.
+
+config ROUTER_PASSWORD
+    string "WiFi Password"
+
+config ROUTER_CHANNEL
+    int "Channel that the router uses"
+    default 1    
+
+config MAX_CLIENTS
+    int "Maximum number of connected clients"
+    default 5
+
+config MAX_LAYERS
+    int "Max Mesh Layers"
+    default 5
+    help
+	Maximum number of layers in the mesh network.
+
+config IS_TODS_ALLOWED
+    bool "Allow comunication to external network"
+    default false
+    help
+    Is the comunication to external network allowed?
+
+config BROKER_URL
+        string "Broker URL"
+        default "mqtt://test.mosquitto.org"
+        help
+            URL of the broker to connect to
+
+config SNTP_SERVER
+        string "SNTP Server"
+        default "pool.ntp.org"
+        help
+            URL of the SNTP Server
+
+endmenu
