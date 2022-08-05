@@ -1,3 +1,28 @@
+#include <string.h>
+#include "esp_system.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_mesh.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+#include "freertos/event_groups.h"
+
+#include <esp_system.h>
+#include <time.h>
+#include <sys/time.h>
+#include <cJSON.h>
+
+#include "lwip/sockets.h"
+#include "lwip/dns.h"
+#include "lwip/netdb.h"
+
+#include "mqtt_client.h"
+#include "esp_sntp.h"
+
 #include "mesh_framework.h"
 
 #define MAX_LAYERS CONFIG_MAX_LAYERS
@@ -80,25 +105,6 @@ void STR2MAC(uint8_t *address,char rec_string[17]){
 	memcpy(address,&mac,sizeof(uint8_t)*6);
 }
 
-uint16_t meshf_uint8_t_json_creator(uint8_t json_value[], uint8_t key[], uint16_t size_key, uint8_t value[], uint16_t size_value){
-	uint8_t front_header[] =  "{ \"";
-	uint8_t inter_header[] = "\" :\"";
-	uint8_t back_header[] = "\"}";
-	int16_t index = 0;
-
-	memcpy(json_value+index,&front_header,sizeof(front_header));
-	index = index + sizeof(front_header)-1;
-	memcpy(json_value+index,key,size_key);
-	index = index + size_key-1;
-	memcpy(json_value+index,&inter_header,sizeof(inter_header));
-	index = index + sizeof(inter_header) - 1;
-	memcpy(json_value+index,value,size_value);
-	index = index + size_value - 1;
-	memcpy(json_value+index,&back_header,sizeof(back_header));
-	index = index + sizeof(back_header) - 1;
-	return index;
-}
-
 void tx_p2p(void *pvParameters){
 	
 	int flag = MESH_DATA_P2P;
@@ -164,7 +170,7 @@ void send_external_net(void *pvParameters){
 
     		int data_size = data.size;
     		char ip_final[19]={0,};
-    		char header[45];
+    		char header[47];
     		char dados[((data_size-7)*3 + (data_size-7))];
     		char dados_final[45 + ((data_size-7)*3 + (data_size-7))];
     		
@@ -180,34 +186,34 @@ void send_external_net(void *pvParameters){
 				}
 			}
     		
-   //  		sprintf(header,"%02x:%02x:%02x:%02x:%02x:%02x;%02x:%02x:%02x:%02x:%02x:%02x;%.3d;%.2d;",
-   //  			from.addr[0],from.addr[1],from.addr[2],from.addr[3],from.addr[4],from.addr[5]+1,
-   //  			data.data[7],data.data[6],data.data[5],data.data[4],data.data[3],data.data[2],
-   //  			(int8_t)data.data[1],(int)data.data[0]);
+    		sprintf(header,"%02x:%02x:%02x:%02x:%02x:%02x;%02x:%02x:%02x:%02x:%02x:%02x;%.3d;%.2d;",
+    			from.addr[0],from.addr[1],from.addr[2],from.addr[3],from.addr[4],from.addr[5]+1,
+    			data.data[7],data.data[6],data.data[5],data.data[4],data.data[3],data.data[2],
+    			(int8_t)data.data[1],(int)data.data[0]);
 
-   //  		sprintf(dados_final,"%s",header);
-   //  		sprintf(dados_final + (int)sizeof(header) - 1,"%s",dados);
+    		sprintf(dados_final,"%s",header);
+    		sprintf(dados_final + (int)sizeof(header) - 1,"%s",dados);
     		
-   //  		ESP_LOGI(MESH_TAG,"%s",dados_final);
+    		ESP_LOGI(MESH_TAG,"%s",dados_final);
 
-   //  		destAddr.sin_addr.s_addr = inet_addr(ip_final);
-   //  		destAddr.sin_family = AF_INET;
-   //  		destAddr.sin_port = htons((unsigned short)to.mip.port);
-   //  		addr_family = AF_INET;
-   //  		ip_protocol = IPPROTO_IP;
-   //  		inet_ntoa_r(destAddr.sin_addr, addr_str, sizeof(addr_str) - 1);
+    		destAddr.sin_addr.s_addr = inet_addr(ip_final);
+    		destAddr.sin_family = AF_INET;
+    		destAddr.sin_port = htons((unsigned short)to.mip.port);
+    		addr_family = AF_INET;
+    		ip_protocol = IPPROTO_IP;
+    		inet_ntoa_r(destAddr.sin_addr, addr_str, sizeof(addr_str) - 1);
 	
-			// int sock =  socket(addr_family, SOCK_STREAM, ip_protocol);
-			// int error = connect(sock, (struct sockaddr *)&destAddr, sizeof(destAddr));
-			// if(error!=0){
-			// 	ESP_LOGE(MESH_TAG,"SERVIDOR SOCKET ESTA OFFLINE \n REINICIANDO CONEXAO");
-			// 	close(sock);
-			// 	xTaskCreatePinnedToCore(&send_external_net,"Recepcao",4096,NULL,5,NULL,1);
-			// 	vTaskDelete(NULL);	
-			// }	
-			// printf("Estado da conexao: %dK\n",error);
-			// send(sock,&dados_final,strlen(dados_final),0);
-			// close(sock);
+			int sock =  socket(addr_family, SOCK_STREAM, ip_protocol);
+			int error = connect(sock, (struct sockaddr *)&destAddr, sizeof(destAddr));
+			if(error!=0){
+				ESP_LOGE(MESH_TAG,"SERVIDOR SOCKET ESTA OFFLINE \n REINICIANDO CONEXAO");
+				close(sock);
+				xTaskCreatePinnedToCore(&send_external_net,"Recepcao",4096,NULL,5,NULL,1);
+				vTaskDelete(NULL);	
+			}	
+			printf("Estado da conexao: %dK\n",error);
+			send(sock,&dados_final,strlen(dados_final),0);
+			close(sock);
 		}	
 	}
 }
@@ -544,9 +550,9 @@ esp_err_t meshf_mqtt_publish(const char *topic, uint16_t topic_size, const char 
 	}
 }
 
-esp_err_t meshf_mqtt_subscribe(const char *topic, int qos, void (*custom_callback_function)(char *parameter, size_t param_lenght)){
+esp_err_t meshf_mqtt_subscribe(const char *topic, int qos, custom_callback_function func_addr){
 	esp_err_t err = ESP_FAIL;
-	static_custom_callback_function = custom_callback_function;
+	static_custom_callback_function = func_addr;
 	if(esp_mesh_is_root()){
 		int error = esp_mqtt_client_subscribe(mqtt_handler, topic, qos);
 		err = (error == -1) ? ESP_FAIL : ESP_OK;
@@ -1049,14 +1055,15 @@ void task_start_sntp(void *pvParameters){
 	vTaskDelete(NULL);
 }
 
-void meshf_start_sntp(void){
-
+esp_err_t meshf_start_sntp(void){
+	esp_err_t err = ESP_OK;
 	sntp_up2date = false;
 	xSemaphoreTake(SemaphoreParentConnected,portMAX_DELAY);
     xSemaphoreGive(SemaphoreParentConnected);
 	if (esp_mesh_is_root()){
     	xTaskCreatePinnedToCore(&task_start_sntp,"task_start_sntp",4096,NULL,5,NULL,0);		
 	}
+	return err;
 }
 
 void task_start_mqtt(void *pvParameters){
@@ -1083,10 +1090,12 @@ void task_start_mqtt(void *pvParameters){
    	vTaskDelete(NULL);
 }
 
-void meshf_start_mqtt(void){
+esp_err_t meshf_start_mqtt(void){
+	esp_err_t err = ESP_OK;
 	xSemaphoreTake(SemaphoreParentConnected,portMAX_DELAY);
     xSemaphoreGive(SemaphoreParentConnected);
 	if (esp_mesh_is_root()){
 		xTaskCreatePinnedToCore(&task_start_mqtt,"task_start_mqtt",4096,NULL,5,NULL,0);		
 	}
+	return err;
 }
