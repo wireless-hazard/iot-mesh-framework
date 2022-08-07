@@ -54,8 +54,8 @@ void app_main(void) {
 
 Althought the title promisses IoT related protocols in general, at the current state, two protocols are supported:
 
-- :heavy_check_mark: SNTP 
-- :heavy_check_mark: MQTT
+- :heavy_check_mark: [SNTP](https://en.wikipedia.org/wiki/Network_Time_Protocol) 
+- :heavy_check_mark: [MQTT](https://mqtt.org/)
 
 The usage of the protocols is still straightforward. Basically, you need to initialize it once, and then call the protocol's functionality that you want.
 
