@@ -1,7 +1,7 @@
 # IoT Mesh Framework
 A WiFi based Mesh Network for the ESP32 that allows its nodes to use IoT related protocols
 
-This framework is build upon the [ESP-WIFI-MESH](https://www.espressif.com/en/products/sdks/esp-wifi-mesh/overview) using the [Espressif IoT Development Framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/), its main goal being to ease the usage of ESP-WIFI-MESH, and add the possibility to use IoT related protocols in each node that the network is composed of.
+This framework is build upon the [ESP-WIFI-MESH](https://docs.espressif.com/projects/esp-idf/en/v4.4.2/esp32/api-guides/esp-wifi-mesh.html) using the [Espressif IoT Development Framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/), its main goal being to ease the usage of ESP-WIFI-MESH, and add the possibility to use IoT related protocols in each node that the network is composed of.
 
 ## Installing and Getting Started
 
